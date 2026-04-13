@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Success Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --white: #ffffff;
+      --bg: #f8fafc;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --green-dark: #047857;
+      --blue: #2563eb;
+      --blue-light: #dbeafe;
+      --blue-dark: #1d4ed8;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --critical: #dc2626;
+      --high: #ea580c;
+      --medium: #ca8a04;
+      --low: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Lexend', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--blue-light) 0%, var(--green-light) 100%);
+    }
+    .login-card {
+      background: var(--white);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      max-width: 400px;
+      width: 100%;
+    }
+    .login-card h1 { color: var(--blue); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .login-card p { color: var(--muted); margin-bottom: 1.5rem; }
+    .login-card input {
+      width: 100%;
+      padding: 0.9rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .login-card input:focus { outline: none; border-color: var(--blue); }
+    .btn { padding: 0.9rem 1.5rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-green { background: var(--green); color: white; }
+
+    .app-shell { display: none; min-height: 100vh; }
+    .app-shell.active { display: flex; }
+    .app-layout { display: flex; flex: 1; min-height: 100vh; }
+    .main-content { flex: 1; overflow-y: auto; padding: 2rem 2.5rem; min-width: 0; }
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: linear-gradient(180deg, var(--blue) 0%, var(--green) 100%);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .sidebar h2 { color: white; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; padding: 0 0.5rem; }
+    .sidebar button {
+      padding: 0.65rem 1rem;
+      border: none;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      text-align: left;
+      transition: background 0.2s;
+    }
+    .sidebar button:hover { background: rgba(255,255,255,0.25); }
+    .sidebar button.active { background: white; color: var(--blue); }
+    .sidebar .user-info { color: rgba(255,255,255,0.9); font-size: 0.8rem; padding: 0.5rem; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.2); }
+    @media (max-width: 700px) { .app-layout { flex-direction: column-reverse; } .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } }
+
+    .page { display: none; max-width: 1400px; margin: 0 auto; width: 100%; }
+    .page.active { display: block; }
+
+    .card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+    .card h2 { color: var(--blue); font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    .risk-badge { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; }
+    .risk-badge.critical { background: #fee2e2; color: var(--critical); }
+    .risk-badge.high { background: #ffedd5; color: var(--high); }
+    .risk-badge.medium { background: #fef9c3; color: var(--medium); }
+    .risk-badge.low { background: var(--green-light); color: var(--green); }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .stat-item { background: var(--bg); padding: 1rem; border-radius: 10px; text-align: center; }
+    .stat-item .val { font-size: 1.4rem; font-weight: 700; color: var(--blue); }
+    .stat-item .lbl { font-size: 0.75rem; color: var(--muted); }
+    .alert-box { padding: 1rem; border-radius: 10px; margin-bottom: 1rem; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; }
+    .focus-list, .good-list { list-style: none; }
+    .focus-list li, .good-list li { padding: 0.6rem 1rem; margin-bottom: 0.5rem; border-radius: 8px; }
+    .focus-list li { background: #fef2f2; color: #991b1b; }
+    .good-list li { background: var(--green-light); color: var(--green-dark); }
+    .chart-wrap { height: 180px; margin-bottom: 0.5rem; }
+    .subject-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    @media (max-width: 800px) { .subject-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .subject-grid { grid-template-columns: 1fr; } }
+    .subject-tile {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+    .subject-tile h3 { font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--blue); }
+    .subject-tile .credits { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .subject-tile .mark { font-size: 1.5rem; font-weight: 700; }
+    .subject-tile .mark.high { color: var(--green); }
+    .subject-tile .mark.mid { color: var(--blue); }
+    .subject-tile .mark.low { color: var(--high); }
+    .peer-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+    }
+    .peer-card strong { color: var(--blue); }
+    .peer-card .score { background: var(--green); color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 700; }
+    .chat-container { display: flex; flex-direction: column; height: 450px; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .chat-msg { max-width: 85%; padding: 0.8rem 1rem; border-radius: 12px; font-size: 0.95rem; }
+    .chat-msg.user { align-self: flex-end; background: var(--blue); color: white; }
+    .chat-msg.bot { align-self: flex-start; background: var(--green-light); color: var(--green-dark); }
+    .chat-input-wrap { display: flex; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--border); }
+    .chat-input-wrap input { flex: 1; padding: 0.8rem; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; }
+    .chat-input-wrap input:focus { outline: none; border-color: var(--blue); }
+    .chat-hint { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+    .error-msg { color: var(--critical); font-size: 0.9rem; margin-top: 0.5rem; }
+    .empty-state { text-align: center; padding: 2rem; color: var(--muted); }
+    .risk-status-card { border-left: 4px solid var(--blue); }
+    .risk-status-msg { font-size: 1.1rem; font-weight: 600; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
+    .risk-status-msg.at-risk { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .risk-status-msg.safe { background: var(--green-light); color: var(--green-dark); border: 1px solid #a7f3d0; }
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    @media (max-width: 700px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    .quick-actions { margin-bottom: 1.5rem; }
+    .quick-actions h2 { margin-bottom: 0.75rem; }
+    .action-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+    .action-card { padding: 1rem; border: 2px solid var(--border); background: var(--white); border-radius: 10px; cursor: pointer; font-weight: 600; color: var(--blue); text-align: left; transition: all 0.2s; }
+    .action-card:hover { border-color: var(--blue); background: var(--blue-light); }
+    .tips-card { background: var(--blue-light); border-color: #93c5fd; }
+    .tips-content { font-size: 0.95rem; line-height: 1.7; }
+    .tips-content li { margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div id="loginPage" class="login-page">
+    <div class="login-card">
+      <h1>Student Success Portal</h1>
+      <p>Enter your Student ID to view your dashboard</p>
+      <input type="text" id="studentIdInput" placeholder="e.g. STU01001" autocomplete="off">
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <p id="loginError" class="error-msg" style="display:none;"></p>
+    </div>
+  </div>
+
+  <div id="appShell" class="app-shell">
+    <div class="app-layout">
+      <aside class="sidebar">
+        <h2>Navigation</h2>
+        <button data-page="dashboard" class="active">Dashboard</button>
+        <button data-page="subjects">Subject Performance</button>
+        <button data-page="focus">Focus & Strengths</button>
+        <button data-page="peers">Peer Learning</button>
+        <button data-page="chatbot">AI Coach</button>
+        <button onclick="logout()">Logout</button>
+        <div class="user-info" id="headerUser"></div>
+      </aside>
+      <main class="main-content">
+    <div id="dashboardPage" class="page active">
+      <div id="riskStatusCard" class="card risk-status-card">
+        <h2>Risk Status</h2>
+        <div id="riskStatusMessage" class="risk-status-msg"></div>
+        <div class="stats-row" id="statsRow"></div>
+        <div class="dashboard-grid">
+          <div class="card">
+            <h2>Subject Overview</h2>
+            <div class="chart-wrap" style="height:220px"><canvas id="dashboardSubjectChart"></canvas></div>
+          </div>
+          <div class="card">
+            <h2>Risk Score</h2>
+            <div class="chart-wrap" style="height:220px"><canvas id="dashboardRiskChart"></canvas></div>
+          </div>
+        </div>
+        <div class="quick-actions">
+          <h2>Quick Actions</h2>
+          <div class="action-cards">
+            <button class="action-card" onclick="goTo('subjects')">View Subject Performance</button>
+            <button class="action-card" onclick="goTo('focus')">See Focus Areas</button>
+            <button class="action-card" onclick="goTo('peers')">Find Peer Learners</button>
+            <button class="action-card" onclick="goTo('chatbot')">Chat with AI Coach</button>
+          </div>
+        </div>
+        <div id="tipsCard" class="card tips-card">
+          <h2>Tips for You</h2>
+          <div id="tipsContent" class="tips-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="subjectsPage" class="page">
+      <div class="card">
+        <h2>Subject Performance</h2>
+        <p class="chat-hint">Your marks across 6 subjects. Credits show course weight — Creativity (2 cr) has less impact than core subjects (3–4 cr).</p>
+        <div class="subject-grid" id="subjectCharts"></div>
+      </div>
+    </div>
+
+    <div id="focusPage" class="page">
+      <div class="card">
+        <h2>Subjects to Focus On</h2>
+        <ul id="focusList" class="focus-list"></ul>
+      </div>
+      <div class="card">
+        <h2>Subjects You're Good At</h2>
+        <ul id="goodList" class="good-list"></ul>
+      </div>
+    </div>
+
+    <div id="peersPage" class="page">
+      <div class="card">
+        <h2>Find Peer Learners</h2>
+        <p class="chat-hint">Select a subject you want to improve in. Connect with peers who excel in that subject.</p>
+        <select id="peerSubject" style="padding:0.5rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:1rem;min-width:200px;">
+          <option value="Python">Python</option>
+          <option value="Java">Java</option>
+          <option value="Data Science">Data Science</option>
+          <option value="DBMS">DBMS</option>
+          <option value="Digital Electronics">Digital Electronics</option>
+          <option value="Creativity and Creation">Creativity and Creation</option>
+        </select>
+        <button class="btn btn-green" onclick="loadPeers()">Find Peers</button>
+        <div id="peersList" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+
+    <div id="chatbotPage" class="page">
+      <div class="card">
+        <h2>AI Study Coach</h2>
+        <p class="chat-hint">Ask about studying, grades, attendance, or how to improve. Academic topics only.</p>
+        <div class="chat-container">
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="chat-input-wrap">
+            <input type="text" id="chatInput" placeholder="e.g. How can I improve my grades?" onkeypress="if(event.key==='Enter')sendChat()">
+            <button class="btn btn-green" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    let currentStudent = null;
+    let insightsData = null;
+
+    document.getElementById('studentIdInput').onkeypress = (e) => { if (e.key === 'Enter') doLogin(); };
+
+    async function doLogin() {
+      const id = document.getElementById('studentIdInput').value.trim().toUpperCase();
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      if (!id) { errEl.textContent = 'Please enter your Student ID'; errEl.style.display = 'block'; return; }
+      try {
+        const res = await fetch(API + '/api/student/login?student_id=' + encodeURIComponent(id));
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Student not found'); }
+        currentStudent = await res.json();
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('appShell').classList.add('active');
+        document.getElementById('headerUser').textContent = currentStudent.name + ' (' + currentStudent.student_id + ')';
+        await loadInsights();
+      } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    }
+
+    function logout() {
+      currentStudent = null;
+      insightsData = null;
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('appShell').classList.remove('active');
+      document.getElementById('studentIdInput').value = '';
+    }
+
+    async function loadInsights() {
+      if (!currentStudent) return;
+      try {
+        insightsData = await fetch(API + '/api/student/' + currentStudent.id + '/insights').then(r => r.json());
+        renderDashboard();
+        renderSubjects();
+        renderFocus();
+      } catch (e) { console.error(e); }
+    }
+
+    function goTo(page) {
+      document.querySelectorAll('.sidebar button[data-page]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelector('.sidebar button[data-page="' + page + '"]').classList.add('active');
+      document.getElementById(page + 'Page').classList.add('active');
+      if (page === 'peers') loadPeers();
+    }
+
+    function renderDashboard() {
+      const riskScore = insightsData?.risk_score ?? currentStudent.risk_score ?? 0;
+      const riskLevel = insightsData?.risk_level ?? currentStudent.risk_level ?? 'low';
+      const atRisk = insightsData?.is_at_risk ?? (riskLevel === 'high' || riskLevel === 'critical');
+      const riskEl = document.getElementById('riskStatusMessage');
+      riskEl.className = 'risk-status-msg ' + (atRisk ? 'at-risk' : 'safe');
+      riskEl.textContent = atRisk
+        ? 'You are at risk. Focus on the subjects below and use Peer Learning and AI Coach for support.'
+        : 'You are not at risk. Keep up the good work and maintain your performance.';
+
+      const levelColor = riskLevel === 'critical' ? 'critical' : riskLevel === 'high' ? 'high' : riskLevel === 'medium' ? 'medium' : 'low';
+      document.getElementById('statsRow').innerHTML = `
+        <div class="stat-item"><div class="val">${currentStudent.current_cgpa}</div><div class="lbl">CGPA</div></div>
+        <div class="stat-item"><div class="val">${currentStudent.attendance}%</div><div class="lbl">Attendance</div></div>
+        <div class="stat-item"><div class="val">${currentStudent.program}</div><div class="lbl">Program</div></div>
+        <div class="stat-item"><div class="val">Sem ${currentStudent.current_semester}</div><div class="lbl">Semester</div></div>
+        <div class="stat-item"><div class="val" style="color:var(--${levelColor})">${riskScore}%</div><div class="lbl">Risk Score</div></div>
+      `;
+
+      const scores = insightsData?.subject_scores || {};
+      const subjLabels = Object.keys(scores);
+      const subjVals = Object.values(scores);
+      const ctx1 = document.getElementById('dashboardSubjectChart')?.getContext('2d');
+      if (ctx1 && subjLabels.length) {
+        new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: subjLabels,
+            datasets: [{ label: 'Marks', data: subjVals, backgroundColor: ['#2563eb','#059669','#7c3aed','#ea580c','#0891b2','#dc2626'].slice(0, subjLabels.length) }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } }, plugins: { legend: { display: false } } }
+        });
+      }
+
+      const ctx2 = document.getElementById('dashboardRiskChart')?.getContext('2d');
+      if (ctx2) {
+        new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: ['Risk', 'Safe'],
+            datasets: [{ data: [riskScore, 100 - riskScore], backgroundColor: [riskScore > 50 ? '#dc2626' : riskScore > 25 ? '#ea580c' : '#16a34a', '#e2e8f0'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+        });
+      }
+
+      const tipsEl = document.getElementById('tipsContent');
+      const focusList = (insightsData?.focus_on || []).filter(s => !['Attendance','Study habits'].includes(s));
+      if (atRisk) {
+        const focusText = focusList.length ? '<li><strong>Focus only on these subjects:</strong> ' + focusList.join(', ') + '</li>' : '';
+        tipsEl.innerHTML = '<ul>' + focusText + '<li>Schedule a meeting with your academic counselor.</li><li>Improve attendance to at least 80%.</li><li>Use Peer Learning to connect with top performers in your weak subjects.</li><li>Set aside 3+ hours daily for study.</li></ul>';
+      } else {
+        tipsEl.innerHTML = '<ul><li>Maintain consistent attendance above 85%.</li><li>Keep practicing subjects where you are strong.</li><li>Help peers through Peer Learning if you excel in a subject.</li><li>Review weak areas to avoid slipping.</li></ul>';
+      }
+    }
+
+    const SUBJECT_COLORS = ['#2563eb','#059669','#7c3aed','#ea580c','#0891b2','#dc2626'];
+    function renderSubjects() {
+      if (!insightsData?.subject_scores) return;
+      const scores = insightsData.subject_scores;
+      const credits = insightsData.subject_credits || {};
+      let html = '';
+      let i = 0;
+      for (const [subj, score] of Object.entries(scores)) {
+        const ctxId = 'chart-' + subj.replace(/\s/g, '-').replace(/&/g,'');
+        const cr = credits[subj] || '-';
+        const markClass = score >= 70 ? 'high' : (score >= 55 ? 'mid' : 'low');
+        html += `<div class="subject-tile">
+          <h3>${subj}</h3>
+          <div class="credits">${cr} credit${cr!==1?'s':''}</div>
+          <div class="mark ${markClass}">${score}/100</div>
+          <div class="chart-wrap"><canvas id="${ctxId}"></canvas></div>
+        </div>`;
+        i++;
+      }
+      document.getElementById('subjectCharts').innerHTML = html;
+      i = 0;
+      for (const [subj, score] of Object.entries(scores)) {
+        const ctxId = 'chart-' + subj.replace(/\s/g, '-').replace(/&/g,'');
+        const ctx = document.getElementById(ctxId)?.getContext('2d');
+        if (ctx) {
+          const color = SUBJECT_COLORS[i % SUBJECT_COLORS.length];
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Marks'],
+              datasets: [{ label: subj, data: [score], backgroundColor: color }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { max: 100 } }, plugins: { legend: { display: false } } }
+          });
+          i++;
+        }
+      }
+    }
+
+    function renderFocus() {
+      const fl = document.getElementById('focusList');
+      const gl = document.getElementById('goodList');
+      fl.innerHTML = (insightsData?.focus_on || []).length ? insightsData.focus_on.map(s => '<li>' + s + '</li>').join('') : '<li class="empty-state">No focus areas — keep up the good work!</li>';
+      gl.innerHTML = (insightsData?.good_at || []).length ? insightsData.good_at.map(s => '<li>' + s + '</li>').join('') : '<li class="empty-state">Keep working to discover your strengths!</li>';
+    }
+
+    async function loadPeers() {
+      const subj = document.getElementById('peerSubject').value;
+      const el = document.getElementById('peersList');
+      el.innerHTML = '<p class="chat-hint">Loading...</p>';
+      try {
+        const peers = await fetch(API + '/api/student/' + currentStudent.id + '/peers?subject=' + encodeURIComponent(subj)).then(r => r.json());
+        el.innerHTML = peers.length ? peers.map(p => `
+          <div class="peer-card">
+            <div><strong>${p.name}</strong><br><span class="chat-hint">${p.student_id} · ${p.program}</span></div>
+            <span class="score">${p.subject_score}% in ${subj}</span>
+          </div>
+        `).join('') : '<p class="empty-state">No peers found for this subject yet.</p>';
+      } catch (e) { el.innerHTML = '<p class="error-msg">Could not load peers.</p>'; }
+    }
+
+    document.querySelectorAll('.sidebar button[data-page]').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.sidebar button[data-page]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.page + 'Page').classList.add('active');
+        if (btn.dataset.page === 'peers') loadPeers();
+      };
+    });
+
+    function addChatMsg(text, isUser) {
+      const div = document.createElement('div');
+      div.className = 'chat-msg ' + (isUser ? 'user' : 'bot');
+      div.textContent = text;
+      document.getElementById('chatMessages').appendChild(div);
+      document.getElementById('chatMessages').scrollTop = 99999;
+    }
+
+    async function sendChat() {
+      const inp = document.getElementById('chatInput');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      addChatMsg(text, true);
+      try {
+        const res = await fetch(API + '/api/chatbot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+        const data = await res.json();
+        addChatMsg(data.reply, false);
+      } catch (e) { addChatMsg('Sorry, could not connect. Try again.', false); }
+    }
+
+    addChatMsg('Hi! I\'m your AI Study Coach. Ask about studying, grades, attendance, or how to improve.', false);
+  </script>
+</body>
+</html>
